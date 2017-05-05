@@ -502,6 +502,87 @@ class Cloudinary_WP_Integration {
 			}
 
 
+		} else {
+
+			/* It's not a new image and hasn't been mirrored to Cloudinary
+			 * so build a WordPress `srcset`, just like would have without the plugin
+			 * Except! Serve up the images from Cloudinary, with `fetch` URLs
+			 *
+			 * (this is all copied over from /wp-includes/media.php, lines 1366-1436)
+			 */
+
+			// Ensure the image meta exists.
+			if ( empty( $image_meta['sizes'] ) ) {
+				return $image;
+			}
+
+			$image_src = preg_match( '/src="([^"]+)"/', $image, $match_src ) ? $match_src[1] : '';
+			list( $image_src ) = explode( '?', $image_src );
+
+			// Return early if we couldn't get the image source.
+			if ( ! $image_src ) {
+				return $image;
+			}
+
+			// Bail early if an image has been inserted and later edited.
+			if ( preg_match( '/-e[0-9]{13}/', $image_meta['file'], $img_edit_hash ) &&
+				strpos( wp_basename( $image_src ), $img_edit_hash[0] ) === false ) {
+
+				return $image;
+			}
+
+			$width  = preg_match( '/ width="([0-9]+)"/',  $image, $match_width  ) ? (int) $match_width[1]  : 0;
+			$height = preg_match( '/ height="([0-9]+)"/', $image, $match_height ) ? (int) $match_height[1] : 0;
+
+			if ( ! $width || ! $height ) {
+				/*
+				 * If attempts to parse the size value failed, attempt to use the image meta data to match
+				 * the image file name from 'src' against the available sizes for an attachment.
+				 */
+				$image_filename = wp_basename( $image_src );
+
+				if ( $image_filename === wp_basename( $image_meta['file'] ) ) {
+					$width = (int) $image_meta['width'];
+					$height = (int) $image_meta['height'];
+				} else {
+					foreach( $image_meta['sizes'] as $image_size_data ) {
+						if ( $image_filename === $image_size_data['file'] ) {
+							$width = (int) $image_size_data['width'];
+							$height = (int) $image_size_data['height'];
+							break;
+						}
+					}
+				}
+			}
+
+			if ( ! $width || ! $height ) {
+				return $image;
+			}
+
+			$size_array = array( $width, $height );
+			$srcset = preg_replace( '/(https?:\/\/)/', 'https://res.cloudinary.com/' . CLD_CLOUD_NAME . '/image/fetch/q_auto,f_auto/$1', wp_calculate_image_srcset( $size_array, $image_src, $image_meta, $attachment_id ) );
+
+			if ( $srcset ) {
+				// Check if there is already a 'sizes' attribute.
+				$sizes = strpos( $image, ' sizes=' );
+
+				if ( ! $sizes ) {
+					$sizes = wp_calculate_image_sizes( $size_array, $image_src, $image_meta, $attachment_id );
+				}
+			}
+
+			if ( $srcset && $sizes ) {
+				// Format the 'srcset' and 'sizes' string and escape attributes.
+				$attr = sprintf( ' srcset="%s"', esc_attr( $srcset ) );
+
+				if ( is_string( $sizes ) ) {
+					$attr .= sprintf( ' sizes="%s"', esc_attr( $sizes ) );
+				}
+
+				// Add 'srcset' and 'sizes' attributes to the image markup.
+				$image = preg_replace( '/<img ([^>]+?)[\/ ]*>/', '<img $1' . $attr . ' />', $image );
+			}
+
 		}
 
 		//////////
