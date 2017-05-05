@@ -381,7 +381,7 @@ class Cloudinary_WP_Integration {
 		error_log( 'make_content_images_responsive() start', 0 );
 		//////////
 
-		if ( ! preg_match_all( '/<figure [^>]+><img [^>]+>/', $content, $matches ) ) {
+		if ( ! preg_match_all( '/<img [^>]+>/', $content, $matches ) ) {
 
 			//////////
 			error_log( 'make_content_images_responsive() is returning early because it couldn’t find any <img>s', 0 );
@@ -396,7 +396,7 @@ class Cloudinary_WP_Integration {
 		foreach( $matches[0] as $image ) {
 			if (
 				false === strpos( $image, ' srcset=' ) &&
-				preg_match( '/media-([0-9]+)/i', $image, $class_id ) &&
+				preg_match( '/wp-image-([0-9]+)/i', $image, $class_id ) &&
 				( $attachment_id = absint( $class_id[1] ) )
 			) {
 
