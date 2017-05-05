@@ -466,7 +466,27 @@ class Cloudinary_WP_Integration {
 				$srcset = '';
 
 				foreach ( $image_meta['cloudinary_data']['sizes'] as $s ) {
-					$srcset .= $s['secure_url'] . ' ' . $s['width'] . 'w, ';
+
+					// add f_auto and q_auto to our transformations...
+
+					// only matches if there are transformations, captures them
+					$get_the_transformations_regex = '/\/image\/upload\/([^\/]+)\/v\d+\//';
+
+					// build an array of existing (if any) + new transformations
+					if ( preg_match( $get_the_transformations_regex, $s['secure_url'], $matches ) ) {
+						$transformations = explode( ',', $matches[1] );
+					} else {
+						$transformations = array();
+					}
+					array_push( $transformations, 'f_auto', 'q_auto' );
+
+					// matches whether or not there are transformations, captures them + version number
+					$put_the_transformations_regex = '/\/image\/upload\/([^\/]+\/)?(v\d+\/)/';
+
+					$transformed_url = preg_replace( $put_the_transformations_regex, '/image/upload/' . implode( ',', $transformations) . '/$2', $s['secure_url'] );
+
+					$srcset .= $transformed_url . ' ' . $s['width'] . 'w, ';
+
 				}
 
 				if ( ! empty( $srcset ) ) {
