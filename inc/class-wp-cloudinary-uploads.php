@@ -10,10 +10,21 @@ class Cloudinary_WP_Integration {
 	 * @return Cloudinary_WP_Integration
 	 */
 	public static function get_instance() {
+
+		//////////
+		error_log( 'get_instance() start', 0 );
+		//////////
+
 		if ( ! self::$instance ) {
 			self::$instance = new Cloudinary_WP_Integration();
 		}
+
+		//////////
+		error_log( 'get_instance() is about to return self::$instance', 0 );
+		//////////
+
 		return self::$instance;
+
 	}
 
 	public function __construct() {
@@ -23,13 +34,28 @@ class Cloudinary_WP_Integration {
 	 * Run setup for the plugin.
 	 */
 	public function setup() {
+
+		//////////
+		error_log( 'setup() start', 0 );
+		//////////
+
 		$this->register_hooks();
+
+		//////////
+		error_log( 'setup() end', 0 );
+		//////////
+
 	}
 
 	/**
 	 * Handle filter/hook registration.
 	 */
 	public function register_hooks() {
+
+		//////////
+		error_log( 'register_hooks() start', 0 );
+		//////////
+
 		add_filter( 'wp_generate_attachment_metadata', array( $this, 'generate_cloudinary_data' ) );
 		// add_filter( 'wp_get_attachment_url', array( $this, 'get_attachment_url' ), 10, 2 );
 		// add_filter( 'image_downsize', array( $this, 'image_downsize' ), 10, 3 );
@@ -40,6 +66,11 @@ class Cloudinary_WP_Integration {
 		// Replace the default WordPress content filter with our own.
 		remove_filter( 'the_content', 'wp_make_content_images_responsive' );
 		add_filter( 'the_content', array( $this, 'make_content_images_responsive' ) );
+
+		//////////
+		error_log( 'register_hooks() end', 0 );
+		//////////
+
 	}
 
 	/**
@@ -49,6 +80,11 @@ class Cloudinary_WP_Integration {
 	 * @return array The filtered metadata.
 	 */
 	public function generate_cloudinary_data( $metadata ) {
+
+		//////////
+		error_log( 'generate_cloudinary_data() start', 0 );
+		//////////
+
 		// Bail early if we don't have a file path to work with.
 		if ( ! isset( $metadata['file'] ) ) {
 			return $metadata;
@@ -73,7 +109,13 @@ class Cloudinary_WP_Integration {
 			}
 		};
 
+		//////////
+		error_log( 'generate_cloudinary_data() is about to return $metadata', 0 );
+		error_log( $metadata, 0 );
+		//////////
+
 		return $metadata;
+
 	}
 
 	/**
@@ -84,6 +126,11 @@ class Cloudinary_WP_Integration {
 	 *                     False on error.
 	 */
 	public function handle_upload( $file ) {
+
+		//////////
+		error_log( 'handle_upload() start', 0 );
+		//////////
+
 		$data = false;
 
 		if ( is_callable( array( '\Cloudinary\Uploader', 'upload' ) ) ) {
@@ -106,7 +153,13 @@ class Cloudinary_WP_Integration {
 			$data = isset( $response['public_id'] ) ? $response : false;
 		}
 
+		//////////
+		error_log( 'handle_upload() is about to return $data', 0 );
+		error_log( $data, 0 );
+		//////////
+
 		return $data;
+
 	}
 
 	/**
@@ -117,13 +170,24 @@ class Cloudinary_WP_Integration {
 	 * @return string The Cloudinary URL if it exists, or the local URL.
 	 */
 	public function get_attachment_url( $url, $attachment_id ) {
+
+		//////////
+		error_log( 'get_attachment_url() start', 0 );
+		//////////
+
 		$metadata = wp_get_attachment_metadata( $attachment_id );
 
 		if ( isset( $metadata['cloudinary_data']['secure_url'] ) ) {
 			$url = $metadata['cloudinary_data']['secure_url'];
 		}
 
+		//////////
+		error_log( 'get_attachment_url() is about to return $url', 0 );
+		error_log( $url );
+		//////////
+
 		return $url;
+
 	}
 
 	/**
@@ -137,6 +201,11 @@ class Cloudinary_WP_Integration {
 	 *               the image is an intermediate size.
 	 */
 	public function image_downsize( $downsize, $attachment_id, $size ) {
+
+		//////////
+		error_log( 'image_downsize() start', 0 );
+		//////////
+
 		$metadata = wp_get_attachment_metadata( $attachment_id );
 
 		if ( isset( $metadata['cloudinary_data']['secure_url'] ) ) {
@@ -177,6 +246,11 @@ class Cloudinary_WP_Integration {
 			}
 		}
 
+		//////////
+		error_log( 'image_downsize() is about to return $downsize', 0 );
+		error_log( $downsize, 0 );
+		//////////
+
 		return $downsize;
 	}
 
@@ -187,6 +261,11 @@ class Cloudinary_WP_Integration {
 	 * @return array An array containing width, height, and crop information.
 	 */
 	private function get_wordpress_image_size_data( $size = null ) {
+
+		//////////
+		error_log( 'get_wordpress_image_size_data() start', 0 );
+		//////////
+
 		global $_wp_additional_image_sizes;
 
 		$sizes = array();
@@ -227,6 +306,11 @@ class Cloudinary_WP_Integration {
 			}
 		}
 
+		//////////
+		error_log( 'get_wordpress_image_size_data() is about to return $sizes', 0 );
+		error_log( $sizes, 0 );
+		//////////
+
 		return $sizes;
 	}
 
@@ -240,6 +324,11 @@ class Cloudinary_WP_Integration {
 	 * @return array Filtered attributes for the image markup.
 	 */
 	public function wp_get_attachment_image_attributes( $attr, $attachment, $size ) {
+
+		//////////
+		error_log( 'wp_get_attachment_image_attributes() start', 0 );
+		//////////
+
 		$metadata = wp_get_attachment_metadata( $attachment->ID );
 
 		$width = $height = false;
@@ -278,12 +367,28 @@ class Cloudinary_WP_Integration {
 			}
 		}
 
+		//////////
+		error_log( 'wp_get_attachment_image_attributes() is about to return $attr', 0 );
+		error_log( $attr );
+		//////////
+
 		return $attr;
 	}
 
 	public function make_content_images_responsive( $content ) {
+
+		//////////
+		error_log( 'make_content_images_responsive() start', 0 );
+		//////////
+
 		if ( ! preg_match_all( '/<figure [^>]+><img [^>]+>/', $content, $matches ) ) {
+
+			//////////
+			error_log( 'make_content_images_responsive() is returning early because it couldn’t find any <img>s', 0 );
+			//////////
+
 			return $content;
+
 		}
 
 		$selected_images = $attachment_ids = array();
@@ -294,6 +399,10 @@ class Cloudinary_WP_Integration {
 				preg_match( '/media-([0-9]+)/i', $image, $class_id ) &&
 				( $attachment_id = absint( $class_id[1] ) )
 			) {
+
+				//////////
+				error_log( $image . "doesn't have a srcset already, has class wp-image-X, and something something appears more than once", 0 );
+				//////////
 
 				/*
 				 * If exactly the same image tag is used more than once, overwrite it.
@@ -320,6 +429,11 @@ class Cloudinary_WP_Integration {
 			$content = str_replace( $image, $this->add_srcset_and_sizes( $image, $image_meta, $attachment_id ), $content );
 		}
 
+		//////////
+		error_log( 'make_content_images_responsive() is about to return $content', 0 );
+		error_log( $content, 0 );
+		//////////
+
 		return $content;
 	}
 
@@ -332,6 +446,11 @@ class Cloudinary_WP_Integration {
 	 * @return string Converted 'img' element with 'srcset' and 'sizes' attributes added.
 	 */
 	public function add_srcset_and_sizes( $image, $image_meta, $attachment_id ) {
+
+		//////////
+		error_log( 'add_srcset_and_sizes() start', 0 );
+		//////////
+
 		if ( isset( $image_meta['cloudinary_data']['sizes'] ) ) {
 			$src = preg_match( '/src="([^"]+)"/', $image, $match_src ) ? $match_src[1] : '';
 			// See if our filename is in the URL string.
@@ -361,7 +480,14 @@ class Cloudinary_WP_Integration {
 
 				$image = preg_replace( '/src="([^"]+)"/', 'src="$1" srcset="' . $srcset . '" sizes="' . $sizes . '"', $image );
 			}
+
+
 		}
+
+		//////////
+		error_log( 'add_srcset_and_sizes() is about to return $image', 0 );
+		error_log( $image, 0 );
+		//////////
 
 		return $image;
 	}
