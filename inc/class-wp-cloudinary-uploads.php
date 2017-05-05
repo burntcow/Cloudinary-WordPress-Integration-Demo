@@ -5,6 +5,8 @@ class Cloudinary_WP_Integration {
 	private static $instance;
 
 	/**
+	 * Singleton.
+	 *
 	 * @return Cloudinary_WP_Integration
 	 */
 	public static function get_instance() {
@@ -29,8 +31,8 @@ class Cloudinary_WP_Integration {
 	 */
 	public function register_hooks() {
 		add_filter( 'wp_generate_attachment_metadata', array( $this, 'generate_cloudinary_data' ) );
-		add_filter( 'wp_get_attachment_url', array( $this, 'get_attachment_url' ), 10, 2 );
-		add_filter( 'image_downsize', array( $this, 'image_downsize' ), 10, 3 );
+		// add_filter( 'wp_get_attachment_url', array( $this, 'get_attachment_url' ), 10, 2 );
+		// add_filter( 'image_downsize', array( $this, 'image_downsize' ), 10, 3 );
 
 		// Filter images created on the fly.
 		add_filter( 'wp_get_attachment_image_attributes', array( $this, 'wp_get_attachment_image_attributes' ), 10, 3 );
@@ -157,7 +159,7 @@ class Cloudinary_WP_Integration {
 
 				$crop = ( $sizes[ $size ]['crop'] ) ? 'c_lfill' : 'c_limit';
 
-				$url_params = "w_$width,h_$height,$crop";
+				$url_params = "w_$width,h_$height,$crop,q_auto,f_auto";
 
 				$downsize = array(
 					str_replace( '/image/upload', '/image/upload/' . $url_params, $metadata['cloudinary_data']['secure_url'] ),
@@ -199,23 +201,29 @@ class Cloudinary_WP_Integration {
 
 			// Set the width.
 			if ( isset( $_wp_additional_image_sizes[ $s ]['width'] ) ) {
-				$sizes[ $s ]['width'] = intval( $_wp_additional_image_sizes[ $s ]['width'] ); // For theme-added sizes
+				// For theme-added sizes.
+				$sizes[ $s ]['width'] = intval( $_wp_additional_image_sizes[ $s ]['width'] );
 			} else {
-				$sizes[ $s ]['width'] = get_option( "{$s}_size_w" ); // For default sizes set in options
+				// For default sizes set in options.
+				$sizes[ $s ]['width'] = get_option( "{$s}_size_w" );
 			}
 
 			// Set the height.
 			if ( isset( $_wp_additional_image_sizes[ $s ]['height'] ) ) {
-				$sizes[ $s ]['height'] = intval( $_wp_additional_image_sizes[ $s ]['height'] ); // For theme-added sizes
+				// For theme-added sizes.
+				$sizes[ $s ]['height'] = intval( $_wp_additional_image_sizes[ $s ]['height'] );
 			} else {
-				$sizes[ $s ]['height'] = get_option( "{$s}_size_h" ); // For default sizes set in options
+				// For default sizes set in options.
+				$sizes[ $s ]['height'] = get_option( "{$s}_size_h" );
 			}
 
 			// Set the crop value.
 			if ( isset( $_wp_additional_image_sizes[ $s ]['crop'] ) ) {
-				$sizes[ $s ]['crop'] = $_wp_additional_image_sizes[ $s ]['crop']; // For theme-added sizes
+				// For theme-added sizes.
+				$sizes[ $s ]['crop'] = $_wp_additional_image_sizes[ $s ]['crop'];
 			} else {
-				$sizes[ $s ]['crop'] = get_option( "{$s}_crop" ); // For default sizes set in options
+				// For default sizes set in options.
+				$sizes[ $s ]['crop'] = get_option( "{$s}_crop" );
 			}
 		}
 
@@ -233,6 +241,8 @@ class Cloudinary_WP_Integration {
 	 */
 	public function wp_get_attachment_image_attributes( $attr, $attachment, $size ) {
 		$metadata = wp_get_attachment_metadata( $attachment->ID );
+
+		$width = $height = false;
 
 		if ( is_string( $size ) ) {
 			if ( 'full' === $size ) {
@@ -271,22 +281,19 @@ class Cloudinary_WP_Integration {
 		return $attr;
 	}
 
-	/**
-	 * Filter images in post content to use Cloudinary URLs.
-	 *
-	 * @param string Post content.
-	 * @return string Fitlered content.
-	 */
 	public function make_content_images_responsive( $content ) {
-		if ( ! preg_match_all( '/<img [^>]+>/', $content, $matches ) ) {
+		if ( ! preg_match_all( '/<figure [^>]+><img [^>]+>/', $content, $matches ) ) {
 			return $content;
 		}
 
 		$selected_images = $attachment_ids = array();
 
-		foreach ( $matches[0] as $image ) {
-			if ( false === strpos( $image, ' srcset=' ) && preg_match( '/wp-image-([0-9]+)/i', $image, $class_id ) &&
-				( $attachment_id = absint( $class_id[1] ) ) ) {
+		foreach( $matches[0] as $image ) {
+			if (
+				false === strpos( $image, ' srcset=' ) &&
+				preg_match( '/media-([0-9]+)/i', $image, $class_id ) &&
+				( $attachment_id = absint( $class_id[1] ) )
+			) {
 
 				/*
 				 * If exactly the same image tag is used more than once, overwrite it.
@@ -321,21 +328,26 @@ class Cloudinary_WP_Integration {
 	 *
 	 * @param string $image          An HTML img element.
 	 * @param array  $image_meta     Attachment metadata for the image.
-	 * @param int    $$attachment_id Image attachment ID.
+	 * @param int    $attachment_id Image attachment ID.
 	 * @return string Converted 'img' element with 'srcset' and 'sizes' attributes added.
 	 */
 	public function add_srcset_and_sizes( $image, $image_meta, $attachment_id ) {
 		if ( isset( $image_meta['cloudinary_data']['sizes'] ) ) {
+			$src = preg_match( '/src="([^"]+)"/', $image, $match_src ) ? $match_src[1] : '';
 			// See if our filename is in the URL string.
-			if ( false !== strpos( $image, wp_basename( $image_meta['cloudinary_data']['url'] ) ) && false === strpos( $image, 'c_lfill' ) ) {
-				$src = preg_match( '/src="([^"]+)"/', $image, $match_src ) ? $match_src[1] : '';
-				$width  = preg_match( '/ width="([0-9]+)"/',  $image, $match_width ) ? (int) $match_width[1]  : 0;
-				$height = preg_match( '/ height="([0-9]+)"/', $image, $match_height ) ? (int) $match_height[1] : 0;
+			if ( false !== strpos( $src, pathinfo( $image_meta['file'], PATHINFO_FILENAME ) ) && false === strpos( $image, 'c_lfill' ) ) {
+				/*
+				 * Dimensions cannot be parsed from the markup, so we're estimating for
+				 * now. Would be better to replace these values with something meaningful
+				 * since the width is used for the `sizes` attribute.
+				 */
+				$width  = 600;
+				$height = 400;
 
 				$srcset = '';
 
 				foreach ( $image_meta['cloudinary_data']['sizes'] as $s ) {
-					$srcset .= $s['secure_url'] . ' ' . $s['width'] .  'w, ';
+					$srcset .= $s['secure_url'] . ' ' . $s['width'] . 'w, ';
 				}
 
 				if ( ! empty( $srcset ) ) {
@@ -347,7 +359,7 @@ class Cloudinary_WP_Integration {
 					$sizes = apply_filters( 'wp_calculate_image_sizes', $sizes, $size, $src, $image_meta, $attachment_id );
 				}
 
-				$image = preg_replace( '/src="([^"]+)"/', 'src="$1" srcset="' . $srcset . '" sizes="' . $sizes .'"', $image );
+				$image = preg_replace( '/src="([^"]+)"/', 'src="$1" srcset="' . $srcset . '" sizes="' . $sizes . '"', $image );
 			}
 		}
 
